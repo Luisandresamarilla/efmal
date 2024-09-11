@@ -2,7 +2,57 @@
 <html>
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat</title>
+    <style>
+      /* Estilos para el contenedor del chat */
+      #chat-container {
+        width: 100%; /* Ancho del contenedor al 100% */
+        height: 100vh; /* Altura del contenedor al 100% de la pantalla */
+        display: flex; /* Usar flexbox para alinear elementos */
+        flex-direction: column; /* Dirección de flexbox en columna */
+        overflow: hidden; /* Ocultar el desbordamiento */
+      }
+
+      /* Estilos para el área de mensajes */
+      #chat-messages {
+        flex: 1; /* Ocupar el espacio restante */
+        overflow-y: auto; /* Habilitar el desplazamiento vertical */
+        padding: 10px; /* Espaciado interno */
+        background-color: #f9f9f9; /* Color de fondo */
+      }
+
+      /* Estilos para el área de entrada */
+      #chat-input {
+        display: flex; /* Usar flexbox para alinear elementos */
+        padding: 10px; /* Espaciado interno */
+        background-color: #fff; /* Color de fondo */
+      }
+
+      /* Estilos para el campo de entrada */
+      #message-input {
+        flex: 1; /* Ocupa el espacio restante */
+        padding: 10px; /* Espaciado interno */
+        border: 1px solid #ccc; /* Borde del campo de entrada */
+        border-radius: 5px; /* Bordes redondeados */
+      }
+
+      /* Estilos para el botón de enviar */
+      #send-button {
+        padding: 10px 15px; /* Espaciado interno */
+        margin-left: 10px; /* Margen a la izquierda */
+        border: none; /* Sin borde */
+        border-radius: 5px; /* Bordes redondeados */
+        background-color: #007bff; /* Color de fondo */
+        color: white; /* Color del texto */
+        cursor: pointer; /* Cambiar cursor al pasar el mouse */
+      }
+
+      /* Efecto al pasar el mouse sobre el botón */
+      #send-button:hover {
+        background-color: #0056b3; /* Color más oscuro al pasar el mouse */
+      }
+    </style>
   </head>
   <body>
     <div id="chat-container">
@@ -25,12 +75,18 @@
       const messageInput = document.getElementById('message-input');
       const sendButton = document.getElementById('send-button');
 
+      // Cargar el sonido de notificación
+      const notificationSound = new Audio('notification.mp3'); // Asegúrate de que la ruta sea correcta
+
+      // Variable para almacenar el último mensaje recibido
+      let lastMessageCount = 0;
+
       // Función para mostrar un mensaje en el chat
       function displayMessage(sender, content) {
         const messageElement = document.createElement('div');
         messageElement.textContent = sender + ': ' + content;
         chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight; // Desplazar hacia abajo para ver el último mensaje
       }
 
       // Función para enviar un mensaje
@@ -79,12 +135,30 @@
         fetch('https://chat-238d1-default-rtdb.firebaseio.com/Mensajes.json')
           .then(response => response.json())
           .then(data => {
-            // Limpiar el contenido actual del chat
-            chatMessages.innerHTML = '';
-            for (let key in data) {
-              const message = data[key];
-              displayMessage(message.sender, message.content);
+            // Contar el número total de mensajes
+            const messageCount = Object.keys(data).length;
+
+            // Verificar si hay nuevos mensajes
+            if (messageCount > lastMessageCount) {
+              // Limpiar el contenido actual del chat
+              chatMessages.innerHTML = '';
+              for (let key in data) {
+                const message = data[key];
+                displayMessage(message.sender, message.content);
+              }
+              // Reproducir sonido de notificación
+              notificationSound.play();
+            } else {
+              // Si no hay nuevos mensajes, solo actualizar el chat
+              chatMessages.innerHTML = '';
+              for (let key in data) {
+                const message = data[key];
+                displayMessage(message.sender, message.content);
+              }
             }
+
+            // Actualizar el contador de mensajes
+            lastMessageCount = messageCount;
           })
           .catch(error => {
             console.error('Error al obtener los mensajes:', error);
