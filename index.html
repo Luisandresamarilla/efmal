@@ -3,54 +3,54 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
+    <title>Chat con Audio</title>
     <style>
       /* Estilos para el contenedor del chat */
       #chat-container {
-        width: 100%; /* Ancho del contenedor al 100% */
-        height: 100vh; /* Altura del contenedor al 100% de la pantalla */
-        display: flex; /* Usar flexbox para alinear elementos */
-        flex-direction: column; /* Dirección de flexbox en columna */
-        overflow: hidden; /* Ocultar el desbordamiento */
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
 
       /* Estilos para el área de mensajes */
       #chat-messages {
-        flex: 1; /* Ocupar el espacio restante */
-        overflow-y: auto; /* Habilitar el desplazamiento vertical */
-        padding: 10px; /* Espaciado interno */
-        background-color: #f9f9f9; /* Color de fondo */
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        background-color: #f9f9f9;
       }
 
       /* Estilos para el área de entrada */
       #chat-input {
-        display: flex; /* Usar flexbox para alinear elementos */
-        padding: 10px; /* Espaciado interno */
-        background-color: #fff; /* Color de fondo */
+        display: flex;
+        padding: 10px;
+        background-color: #fff;
       }
 
       /* Estilos para el campo de entrada */
       #message-input {
-        flex: 1; /* Ocupa el espacio restante */
-        padding: 10px; /* Espaciado interno */
-        border: 1px solid #ccc; /* Borde del campo de entrada */
-        border-radius: 5px; /* Bordes redondeados */
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
       }
 
-      /* Estilos para el botón de enviar */
-      #send-button {
-        padding: 10px 15px; /* Espaciado interno */
-        margin-left: 10px; /* Margen a la izquierda */
-        border: none; /* Sin borde */
-        border-radius: 5px; /* Bordes redondeados */
-        background-color: #007bff; /* Color de fondo */
-        color: white; /* Color del texto */
-        cursor: pointer; /* Cambiar cursor al pasar el mouse */
+      /* Estilos para el botón de enviar y grabar */
+      #send-button, #record-button {
+        padding: 10px 15px;
+        margin-left: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
       }
 
       /* Efecto al pasar el mouse sobre el botón */
-      #send-button:hover {
-        background-color: #0056b3; /* Color más oscuro al pasar el mouse */
+      #send-button:hover, #record-button:hover {
+        background-color: #0056b3;
       }
     </style>
   </head>
@@ -60,6 +60,7 @@
       <div id="chat-input">
         <input type="text" id="message-input" placeholder="Escribe tu mensaje...">
         <button id="send-button">Enviar</button>
+        <button id="record-button">Grabar Audio</button>
       </div>
     </div>
 
@@ -67,44 +68,67 @@
       // Obtener el nombre del participante
       let participantName = prompt('Ingresa tu nombre:');
       if (participantName === null || participantName.trim() === '') {
-        participantName = 'Invitado'; // Si el usuario no ingresa un nombre, utilizar "Invitado" como nombre predeterminado
+        participantName = 'Invitado';
       }
 
       // Elementos del chat
       const chatMessages = document.getElementById('chat-messages');
       const messageInput = document.getElementById('message-input');
       const sendButton = document.getElementById('send-button');
+      const recordButton = document.getElementById('record-button');
 
       // Cargar el sonido de notificación
-      const notificationSound = new Audio('notification.mp3'); // Asegúrate de que la ruta sea correcta
+      const notificationSound = new Audio('notification.mp3');
 
       // Variable para almacenar el último mensaje recibido
       let lastMessageCount = 0;
 
+      // Bandera para controlar si se está grabando
+      let isRecording = false;
+      let isPlayingAudio = false;
+      let mediaRecorder;
+      let audioChunks = [];
+
       // Función para mostrar un mensaje en el chat
-      function displayMessage(sender, content) {
+      function displayMessage(sender, content, isAudio = false) {
         const messageElement = document.createElement('div');
-        messageElement.textContent = sender + ': ' + content;
+        if (isAudio) {
+          const audioElement = document.createElement('audio');
+          audioElement.controls = true;
+          audioElement.src = content;
+          audioElement.type = 'audio/mpeg';
+          audioElement.addEventListener('play', () => {
+            isPlayingAudio = true;
+          });
+          audioElement.addEventListener('pause', () => {
+            isPlayingAudio = false;
+          });
+          messageElement.appendChild(audioElement);
+        } else {
+          messageElement.textContent = `${sender}: ${content}`;
+        }
         chatMessages.appendChild(messageElement);
-        chatMessages.scrollTop = chatMessages.scrollHeight; // Desplazar hacia abajo para ver el último mensaje
+        chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
-      // Función para enviar un mensaje
-      function sendMessage() {
+      // Función para enviar un mensaje de texto
+      function sendTextMessage() {
         const messageContent = messageInput.value;
-
-        // Validar que el mensaje no esté vacío
         if (messageContent.trim() === '') {
           return;
         }
+        sendMessage(messageContent);
+        messageInput.value = '';
+      }
 
-        // Crear el objeto del mensaje
+      // Función para enviar un mensaje (texto o audio)
+      function sendMessage(content, isAudio = false) {
         const message = {
           sender: participantName,
-          content: messageContent
+          content: content,
+          isAudio: isAudio
         };
 
-        // Realizar una petición POST a la API para enviar el mensaje
         fetch('https://chat-238d1-default-rtdb.firebaseio.com/Mensajes.json', {
           method: 'POST',
           headers: {
@@ -114,9 +138,7 @@
         })
           .then(response => {
             if (response.ok) {
-              // Mostrar el mensaje en el chat
-              displayMessage(participantName, messageContent);
-              messageInput.value = ''; // Limpiar el campo de entrada de mensajes
+              displayMessage(participantName, content, isAudio);
             } else {
               console.error('Error al enviar el mensaje:', response.status);
             }
@@ -126,38 +148,63 @@
           });
       }
 
-      // Manejar el evento de clic en el botón de enviar
-      sendButton.addEventListener('click', sendMessage);
+      // Función para comenzar a grabar audio
+      function startRecording() {
+        if (isRecording) return; // Si ya está grabando, no hacer nada
+
+        isRecording = true; // Establecer la bandera de grabación
+        audioChunks = []; // Limpiar los fragmentos de audio
+
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.addEventListener('dataavailable', event => {
+              audioChunks.push(event.data);
+            });
+
+            mediaRecorder.start();
+          })
+          .catch(error => {
+            console.error('Error al grabar audio:', error);
+            isRecording = false; // Restablecer la bandera de grabación en caso de error
+          });
+      }
+
+      // Función para detener la grabación y enviar el audio
+      function stopRecording() {
+        if (!isRecording) return; // Si no está grabando, no hacer nada
+
+        mediaRecorder.stop();
+        mediaRecorder.addEventListener('stop', () => {
+          const audioBlob = new Blob(audioChunks);
+          const audioUrl = URL.createObjectURL(audioBlob);
+          sendMessage(audioUrl, true);
+          isRecording = false; // Restablecer la bandera de grabación
+        });
+      }
 
       // Función para actualizar el chat sin recargar la página
       function updateChat() {
-        // Obtener los mensajes existentes de la API y mostrarlos en el chat
+        if (isRecording || isPlayingAudio) return; // No actualizar si se está grabando o reproduciendo audio
+
         fetch('https://chat-238d1-default-rtdb.firebaseio.com/Mensajes.json')
           .then(response => response.json())
           .then(data => {
-            // Contar el número total de mensajes
             const messageCount = Object.keys(data).length;
-
-            // Verificar si hay nuevos mensajes
             if (messageCount > lastMessageCount) {
-              // Limpiar el contenido actual del chat
               chatMessages.innerHTML = '';
               for (let key in data) {
                 const message = data[key];
-                displayMessage(message.sender, message.content);
+                displayMessage(message.sender, message.content, message.isAudio);
               }
-              // Reproducir sonido de notificación
               notificationSound.play();
             } else {
-              // Si no hay nuevos mensajes, solo actualizar el chat
               chatMessages.innerHTML = '';
               for (let key in data) {
                 const message = data[key];
-                displayMessage(message.sender, message.content);
+                displayMessage(message.sender, message.content, message.isAudio);
               }
             }
-
-            // Actualizar el contador de mensajes
             lastMessageCount = messageCount;
           })
           .catch(error => {
@@ -165,7 +212,15 @@
           });
       }
 
-      // Actualizar el chat cada 5 segundos (puedes ajustar el intervalo según tus necesidades)
+      // Manejar el evento de clic en el botón de enviar
+      sendButton.addEventListener('click', sendTextMessage);
+
+      // Manejar los eventos de presionar y soltar el botón de grabar
+      recordButton.addEventListener('mousedown', startRecording);
+      recordButton.addEventListener('mouseup', stopRecording);
+      recordButton.addEventListener('mouseleave', stopRecording); // Para detener grabación si se sale del botón
+
+      // Actualizar el chat cada 5 segundos
       setInterval(updateChat, 5000);
     </script>
   </body>
