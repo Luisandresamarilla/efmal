@@ -25,7 +25,7 @@
       const messageInput = document.getElementById('message-input');
       const sendButton = document.getElementById('send-button');
 
-      // FunciÃ³n para mostrar un mensaje en el chat
+      // Función para mostrar un mensaje en el chat
       function displayMessage(sender, content) {
         const messageElement = document.createElement('div');
         messageElement.textContent = sender + ': ' + content;
@@ -33,11 +33,11 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
-      // FunciÃ³n para enviar un mensaje
+      // Función para enviar un mensaje
       function sendMessage() {
         const messageContent = messageInput.value;
 
-        // Validar que el mensaje no estÃ© vacÃ­o
+        // Validar que el mensaje no esté vacío
         if (messageContent.trim() === '') {
           return;
         }
@@ -48,7 +48,7 @@
           content: messageContent
         };
 
-        // Realizar una peticiÃ³n POST a la API para enviar el mensaje
+        // Realizar una petición POST a la API para enviar el mensaje
         fetch('https://chat-238d1-default-rtdb.firebaseio.com/Mensajes.json', {
           method: 'POST',
           headers: {
@@ -70,21 +70,29 @@
           });
       }
 
-      // Manejar el evento de clic en el botÃ³n de enviar
+      // Manejar el evento de clic en el botón de enviar
       sendButton.addEventListener('click', sendMessage);
 
-      // Obtener los mensajes existentes de la API y mostrarlos en el chat
-      fetch('https://chat-238d1-default-rtdb.firebaseio.com/Mensajes.json')
-        .then(response => response.json())
-        .then(data => {
-          for (let key in data) {
-            const message = data[key];
-            displayMessage(message.sender, message.content);
-          }
-        })
-        .catch(error => {
-          console.error('Error al obtener los mensajes:', error);
-        });
+      // Función para actualizar el chat sin recargar la página
+      function updateChat() {
+        // Obtener los mensajes existentes de la API y mostrarlos en el chat
+        fetch('https://chat-238d1-default-rtdb.firebaseio.com/Mensajes.json')
+          .then(response => response.json())
+          .then(data => {
+            // Limpiar el contenido actual del chat
+            chatMessages.innerHTML = '';
+            for (let key in data) {
+              const message = data[key];
+              displayMessage(message.sender, message.content);
+            }
+          })
+          .catch(error => {
+            console.error('Error al obtener los mensajes:', error);
+          });
+      }
+
+      // Actualizar el chat cada 5 segundos (puedes ajustar el intervalo según tus necesidades)
+      setInterval(updateChat, 5000);
     </script>
   </body>
 </html>
